@@ -32,6 +32,7 @@ import (
 	"github.com/containerd/containerd/v2/core/unpack"
 	"github.com/containerd/containerd/v2/defaults"
 	snpkg "github.com/containerd/containerd/v2/pkg/snapshotters"
+	"github.com/containerd/containerd/v2/pkg/tracing"
 )
 
 func (ts *localTransferService) pull(ctx context.Context, ir transfer.ImageFetcher, is transfer.ImageStorer, tops *transfer.Config) error {
@@ -200,6 +201,12 @@ func (ts *localTransferService) pull(ctx context.Context, ir transfer.ImageFetch
 						enableRemoteSnapshotAnnotations = true
 					}
 					uopts = append(uopts, unpack.WithUnpackPlatform(mu))
+					// Parent span to record snapshotter configuration used for unpack
+					_, cfgSpan := tracing.StartSpan(ctx, tracing.Name("pull", "UnpackSetup"))
+					cfgSpan.SetAttributes(
+						tracing.Attribute("snapshotter.name", mu.SnapshotterKey),
+					)
+					cfgSpan.End()
 				}
 			}
 
@@ -231,9 +238,13 @@ func (ts *localTransferService) pull(ctx context.Context, ir transfer.ImageFetch
 	// record in ImageService, should wait for unpacking(including blobs
 	// download).
 	if unpacker != nil {
+		_, unpackSpan := tracing.StartSpan(ctx, tracing.Name("pull", "UnpackWait"))
 		if _, err = unpacker.Wait(); err != nil {
+			unpackSpan.SetStatus(err)
+			unpackSpan.End()
 			return err
 		}
+		unpackSpan.End()
 		// TODO: Check results to make sure unpack was successful
 	}
 

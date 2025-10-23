@@ -70,6 +70,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/opencontainers/runtime-spec/specs-go/features"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"golang.org/x/sync/semaphore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
@@ -156,6 +157,10 @@ func New(address string, opts ...Opt) (*Client, error) {
 			gopts = append(gopts, grpc.WithChainUnaryInterceptor(unary))
 			gopts = append(gopts, grpc.WithChainStreamInterceptor(stream))
 		}
+
+		// Enable OpenTelemetry gRPC client propagation so server-side spans (e.g., unpack)
+		// are parented under the client root span when present.
+		gopts = append(gopts, grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 
 		connector := func() (*grpc.ClientConn, error) {
 			conn, err := grpc.NewClient(dialer.DialAddress(address), gopts...)

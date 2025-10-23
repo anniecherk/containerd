@@ -25,6 +25,7 @@ import (
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/containerd/v2/pkg/epoch"
 	"github.com/containerd/containerd/v2/pkg/namespaces"
+	"github.com/containerd/containerd/v2/pkg/tracing"
 	"github.com/containerd/log"
 	"github.com/urfave/cli/v2"
 )
@@ -53,7 +54,20 @@ func AppContext(cliContext *cli.Context) (context.Context, context.CancelFunc) {
 		log.L.Debugf("Using SOURCE_DATE_EPOCH: %v", tm)
 		ctx = epoch.WithSourceDateEpoch(ctx, tm)
 	}
-	return ctx, cancel
+    // Start a minimal root span for the command to parent client spans.
+    // Keep naming simple: "ctr.<command>".
+    rootName := "ctr."
+    if cliContext != nil && cliContext.Command.Name != "" {
+        rootName += cliContext.Command.Name
+    } else {
+        rootName += "command"
+    }
+    ctx, span := tracing.StartSpan(ctx, rootName)
+    wrappedCancel := func() {
+        span.End()
+        cancel()
+    }
+    return ctx, wrappedCancel
 }
 
 // NewClient returns a new containerd client
