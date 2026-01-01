@@ -27,6 +27,7 @@ import (
 	"github.com/containerd/containerd/v2/cmd/ctr/commands/containers"
 	"github.com/containerd/containerd/v2/cmd/ctr/commands/content"
 	"github.com/containerd/containerd/v2/cmd/ctr/commands/deprecations"
+	"github.com/containerd/containerd/v2/cmd/ctr/commands/erofs"
 	"github.com/containerd/containerd/v2/cmd/ctr/commands/events"
 	"github.com/containerd/containerd/v2/cmd/ctr/commands/images"
 	"github.com/containerd/containerd/v2/cmd/ctr/commands/info"
@@ -121,6 +122,7 @@ containerd CLI
 		versionCmd.Command,
 		containers.Command,
 		content.Command,
+		erofs.Command,
 		events.Command,
 		images.Command,
 		leases.Command,
